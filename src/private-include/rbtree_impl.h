@@ -1,19 +1,16 @@
 #pragma once
-#include "set.h"
+#include "types.h"
 
 namespace nictheboy {
 
-class RBTreeImpl;
-class RBTree : Set {
+class RBTreeImpl {
    private:
-    RBTreeImpl* impl;
-
    public:
-    RBTree();
-    virtual ~RBTree();
+    RBTreeImpl();
+    virtual ~RBTreeImpl();
     virtual void Insert(KeyType key, ObjectType object);
     virtual void Delete(KeyType key);
     virtual ObjectType Find(KeyType key);
 };
 
-}  // namespace nictheboy
+};  // namespace nictheboy
