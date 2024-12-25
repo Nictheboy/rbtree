@@ -43,7 +43,7 @@ class RBTreeImpl {
         std::optional<Direction> parent_to_node;
     };
 
-    ParentChild RefactorNodeToBlack(
+    ParentChild RefactorChildToBlack(
         Node* node,
         Node* parent,
         std::optional<Direction> parent_to_node,

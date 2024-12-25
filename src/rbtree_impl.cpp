@@ -45,13 +45,13 @@ void RBTreeImpl::Refactor3Childs(Node* node,
 }
 
 RBTreeImpl::ParentChild
-RBTreeImpl::RefactorNodeToBlack(Node* node,
-                                Node* parent,
-                                std::optional<Direction> parent_to_node,
-                                Node* grandparent,
-                                std::optional<Direction> grandparent_to_parent,
-                                Node** ref_grandparent,
-                                KeyType toward_key) {
+RBTreeImpl::RefactorChildToBlack(Node* node,
+                                 Node* parent,
+                                 std::optional<Direction> parent_to_node,
+                                 Node* grandparent,
+                                 std::optional<Direction> grandparent_to_parent,
+                                 Node** ref_grandparent,
+                                 KeyType toward_key) {
     assert(node);
     assert(node->color == Color::BLACK);
     if (parent && parent->color == Color::RED) {
@@ -97,27 +97,33 @@ RBTreeImpl::RefactorNodeToBlack(Node* node,
 }
 
 void RBTreeImpl::Insert(KeyType key, ObjectType object) {
+    auto new_node = new Node{key, object, nullptr, nullptr, Color::RED};
     if (!root) {
-        root = new Node{key, object, nullptr, nullptr, Color::BLACK};
+        root = new_node;
         return;
     }
     Node *current = root, *parent = nullptr, *grandparent = nullptr, **ref_grandparent = nullptr;
     std::optional<Direction> parent_to_current, grandparent_to_parent;
+    auto direction = current->direction(key);
+    Node* next = current->child(direction);
+    if (!next) {
+        current->color = Color::BLACK;
+        current->child(direction) = new_node;
+        return;
+    }
     while (true) {
-        auto direction = current->direction(key);
-        auto next = current->child(direction);
-        if (!next || (current->lchild && current->lchild->color == Color::RED &&
-                      current->rchild && current->rchild->color == Color::RED)) {
-            auto ret = RefactorNodeToBlack(current, parent, parent_to_current,
-                                           grandparent, grandparent_to_parent,
-                                           ref_grandparent, key);
+        if ((next && !next->child(next->direction(key)) && next->color == Color::RED) ||
+            (current->lchild && current->lchild->color == Color::RED &&
+             current->rchild && current->rchild->color == Color::RED)) {
+            auto ret = RefactorChildToBlack(current, parent, parent_to_current,
+                                            grandparent, grandparent_to_parent,
+                                            ref_grandparent, key);
             current = ret.child;
             parent = ret.parent;
             parent_to_current = ret.parent_to_node;
         }
         if (!next) {
-            next = new Node{key, object, nullptr, nullptr, Color::RED};
-            current->child(direction) = next;
+            next = current->child(direction) = next;
             return;
         }
         if (grandparent)
@@ -127,6 +133,8 @@ void RBTreeImpl::Insert(KeyType key, ObjectType object) {
         current = next;
         grandparent_to_parent = parent_to_current;
         parent_to_current = direction;
+        direction = current->direction(key);
+        next = current->child(direction);
     }
 }
 
