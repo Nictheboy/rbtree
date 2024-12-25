@@ -57,7 +57,8 @@ class RBTreeImpl {
     ~RBTreeImpl();
     void Insert(KeyType key, ObjectType object);
     void Delete(KeyType key);
-    ObjectType Find(KeyType key);
+    std::optional<ObjectType> Find(KeyType key);
+    void Debug();
 };
 
 };  // namespace nictheboy

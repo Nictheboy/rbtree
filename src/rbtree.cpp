@@ -1,4 +1,5 @@
 #include "rbtree.h"
+#include <stdio.h>
 #include "private-include/rbtree_impl.h"
 
 namespace nictheboy {
@@ -12,14 +13,16 @@ RBTree::~RBTree() {
 }
 
 void RBTree::Insert(KeyType key, ObjectType object) {
+    printf("Insert(%lld, %p)\n", key, object);
     this->impl->Insert(key, object);
+    this->impl->Debug();
 }
 
 void RBTree::Delete(KeyType key) {
     this->impl->Delete(key);
 }
 
-ObjectType RBTree::Find(KeyType key) {
+std::optional<ObjectType> RBTree::Find(KeyType key) {
     return this->impl->Find(key);
 }
 

@@ -1,5 +1,7 @@
 #include "private-include/rbtree_impl.h"
 #include <assert.h>
+#include <stdio.h>
+#include <functional>
 
 namespace nictheboy {
 
@@ -20,9 +22,20 @@ void RBTreeImpl::ReleaseNodesRecursively(RBTreeImpl::Node* node) {
     delete node;
 }
 
-void RBTreeImpl::Refactor3Childs(Node* node,
-                                 Direction direction_of_red_child,
-                                 Node** ref) {
+void RBTreeImpl::Debug() {
+    std::function<void(Node * node, int depth)> PrintNode = [&](Node* node, int depth) {
+        if (!node)
+            return;
+        PrintNode(node->rchild, depth + 1);
+        for (int i = 0; i < depth; i++)
+            printf("\t");
+        printf("[%c] %lld\n", node->color == Color::BLACK ? 'B' : 'R', node->key);
+        PrintNode(node->lchild, depth + 1);
+    };
+    PrintNode(root, 0);
+}
+
+void RBTreeImpl::Refactor3Childs(Node* node, Direction direction_of_red_child, Node** ref) {
     assert(node);
     assert(node->color == Color::BLACK);
     auto node_2 = node->child(direction_of_red_child);
@@ -66,16 +79,14 @@ RBTreeImpl::RefactorChildToBlack(Node* node,
                 // refactor
                 *ref_grandparent = node;
                 auto child_1 = node->child(direction_of_parent_to_node);
-                if (child_1) {
+                if (child_1)
                     child_1->color = Color::BLACK;
-                    grandparent->child(direction_of_grandparent_to_parent) = child_1;
-                }
+                grandparent->child(direction_of_grandparent_to_parent) = child_1;
                 grandparent->color = Color::RED;
                 auto child_2 = node->child(direction_of_grandparent_to_parent);
-                if (child_2) {
+                if (child_2)
                     child_2->color = Color::BLACK;
-                    parent->child(direction_of_parent_to_node) = child_2;
-                }
+                parent->child(direction_of_parent_to_node) = child_2;
                 node->child(direction_of_parent_to_node) = grandparent;
                 node->child(direction_of_grandparent_to_parent) = parent;
                 // set vars
@@ -122,12 +133,15 @@ void RBTreeImpl::Insert(KeyType key, ObjectType object) {
             parent = ret.parent;
             parent_to_current = ret.parent_to_node;
         }
+        direction = current->direction(key);
+        next = current->child(direction);
         if (!next) {
-            next = current->child(direction) = next;
+            current->child(direction) = new_node;
             return;
         }
-        if (grandparent)
-            ref_grandparent = &grandparent->child(grandparent_to_parent.value());
+        ref_grandparent = grandparent ? &grandparent->child(grandparent_to_parent.value())
+                          : parent    ? &root
+                                      : nullptr;
         grandparent = parent;
         parent = current;
         current = next;
@@ -141,8 +155,15 @@ void RBTreeImpl::Insert(KeyType key, ObjectType object) {
 void RBTreeImpl::Delete(KeyType key) {
 }
 
-ObjectType RBTreeImpl::Find(KeyType key) {
-    return ObjectType();
+std::optional<ObjectType> RBTreeImpl::Find(KeyType key) {
+    auto current = root;
+    while (current) {
+        if (current->key == key)
+            return current->object;
+        auto direction = current->direction(key);
+        current = current->child(direction);
+    }
+    return std::nullopt;
 }
 
 }  // namespace nictheboy

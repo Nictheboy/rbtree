@@ -4,7 +4,7 @@
 namespace nictheboy {
 
 class RBTreeImpl;
-class RBTree : Set {
+class RBTree : public Set {
    private:
     RBTreeImpl* impl;
 
@@ -13,7 +13,7 @@ class RBTree : Set {
     virtual ~RBTree();
     virtual void Insert(KeyType key, ObjectType object);
     virtual void Delete(KeyType key);
-    virtual ObjectType Find(KeyType key);
+    virtual std::optional<ObjectType> Find(KeyType key);
 };
 
 }  // namespace nictheboy
