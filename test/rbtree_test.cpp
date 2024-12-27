@@ -26,6 +26,6 @@ void test_set(std::shared_ptr<nictheboy::Set> target,
 TEST(RBTreeTest, TestInsert) {
     auto target = std::make_shared<nictheboy::RBTree>();
     auto standard = std::make_shared<StandardSet>();
-    for (int i = 0; i < 1000; i++)
-        test_set(target, standard, 1000, 10000);
+    for (int i = 0; i < 100; i++)
+        test_set(target, standard, 10000, 100000);
 }

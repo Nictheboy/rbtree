@@ -13,9 +13,13 @@ RBTree::~RBTree() {
 }
 
 void RBTree::Insert(KeyType key, ObjectType object) {
+#ifdef NDEBUG
+    this->impl->Insert(key, object);
+#else
     printf("Insert(%lld, %p)\n", key, object);
     this->impl->Insert(key, object);
     this->impl->Debug();
+#endif
 }
 
 void RBTree::Delete(KeyType key) {

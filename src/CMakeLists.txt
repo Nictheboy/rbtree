@@ -1,6 +1,5 @@
 SET(CORE_SOURCES
     rbtree.cpp
-    rbtree_impl.cpp
 )
 
 if(NOT TARGET rbtree-nictheboy)
