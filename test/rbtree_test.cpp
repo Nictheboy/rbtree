@@ -15,6 +15,8 @@ void test_set(std::shared_ptr<nictheboy::Set> target,
         ASSERT_EQ(ret_1.has_value(), ret_2.has_value());
         if (ret_1.has_value()) {
             ASSERT_EQ(*ret_1, *ret_2);
+            target->Delete(random_key);
+            standard->Delete(random_key);
         } else {
             auto random_object = (nictheboy::ObjectType)(long long)std::rand();
             target->Insert(random_key, random_object);
@@ -24,8 +26,9 @@ void test_set(std::shared_ptr<nictheboy::Set> target,
 }
 
 TEST(RBTreeTest, TestInsert) {
-    auto target = std::make_shared<nictheboy::RBTree>();
-    auto standard = std::make_shared<StandardSet>();
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 10; i++) {
+        auto target = std::make_shared<nictheboy::RBTree>();
+        auto standard = std::make_shared<StandardSet>();
         test_set(target, standard, 10000, 100000);
+    }
 }

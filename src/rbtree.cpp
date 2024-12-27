@@ -23,7 +23,13 @@ void RBTree::Insert(KeyType key, ObjectType object) {
 }
 
 void RBTree::Delete(KeyType key) {
+#ifdef NDEBUG
     this->impl->Delete(key);
+#else
+    printf("Delete(%lld)\n", key);
+    this->impl->Delete(key);
+    this->impl->Debug();
+#endif
 }
 
 std::optional<ObjectType> RBTree::Find(KeyType key) {

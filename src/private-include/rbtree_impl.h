@@ -1,5 +1,6 @@
 #pragma once
 #include <assert.h>
+#include <algorithm>
 #include <functional>
 #include <optional>
 #include "types.h"
@@ -156,6 +157,133 @@ class RBTreeImpl {
         }
     }
 
+    Node* DetachNode(KeyType key) {
+        assert(root);
+        if (root->color == Color::RED)
+            return DetachOnRedRootSubtree(&root, key);
+        if ((!root->lchild || root->lchild->color == Color::BLACK) &&
+            (!root->rchild || root->rchild->color == Color::BLACK)) {
+            root->color = Color::RED;
+            return DetachOnRedRootSubtree(&root, key);
+        }
+        if (root->key == key) {
+            auto direction = (root->lchild && root->lchild->color == Color::RED) ? Direction::LEFT : Direction::RIGHT;
+            auto red_subtree_root = &root->child(direction);
+            auto minmax = DetachOnRedRootSubtree(red_subtree_root, MinOrMaxOfSubtree(*red_subtree_root, Opposite(direction)));
+            std::swap(root->key, minmax->key);
+            std::swap(root->object, minmax->object);
+            return minmax;
+        }
+        auto direction = root->direction(key);
+        auto subtree = &root->child(direction);
+        assert(*subtree);
+        if ((*subtree)->color == Color::RED)
+            return DetachOnRedRootSubtree(subtree, key);
+        Rotate(&root, direction);
+        root->color = Color::BLACK;
+        subtree = &root->child(direction);
+        (*subtree)->color = Color::RED;
+        return DetachOnRedRootSubtree(subtree, key);
+    }
+
+    Node* DetachOnRedRootSubtree(Node** red_subtree_root, KeyType key) {
+        assert(*red_subtree_root);
+        Node** ref = red_subtree_root;
+        while (true) {
+            assert((*ref)->color == Color::RED);
+            if ((*ref)->key == key)
+                return DetachRedNode(ref);
+            auto dir = (*ref)->direction(key);
+            auto ref_child_dir = &(*ref)->child(dir);
+            assert(*ref_child_dir);
+            if ((*ref_child_dir)->lchild || (*ref_child_dir)->rchild) {
+                if ((*ref_child_dir)->key == key) {
+                    auto child_dir = *ref_child_dir;
+                    assert(child_dir->lchild || child_dir->rchild);
+                    auto direction = child_dir->lchild ? Direction::LEFT : Direction::RIGHT;
+                    auto subtree_2 = child_dir->child(direction);
+                    assert(subtree_2);
+                    auto minmax = DetachOnRedRootSubtree(ref, MinOrMaxOfSubtree(subtree_2, Opposite(direction)));
+                    std::swap(child_dir->key, minmax->key);
+                    std::swap(child_dir->object, minmax->object);
+                    return minmax;
+                }
+                auto dir2 = (*ref_child_dir)->direction(key);
+                auto ref_child_dir_child_dir2 = &(*ref_child_dir)->child(dir2);
+                assert(*ref_child_dir_child_dir2);
+                if ((*ref_child_dir_child_dir2)->color == Color::RED) {
+                    ref = ref_child_dir_child_dir2;
+                    continue;
+                }
+                auto opp2 = Opposite(dir2);
+                auto ref_child_dir_child_opp2 = &(*ref_child_dir)->child(opp2);
+                if (ref_child_dir_child_opp2 && (*ref_child_dir_child_opp2)->color == Color::RED) {
+                    Rotate(ref_child_dir, dir2);
+                    (*ref_child_dir)->color = Color::BLACK;
+                    ref = &(*ref_child_dir)->child(dir2);
+                    (*ref)->color = Color::RED;
+                    continue;
+                }
+            }
+            auto opp = Opposite(dir);
+            auto ref_child_opp = &(*ref)->child(opp);
+            assert(*ref_child_opp);
+            auto ref_child_opp_child_dir = &(*ref_child_opp)->child(dir);
+            auto ref_child_opp_child_opp = &(*ref_child_opp)->child(opp);
+            if ((!*ref_child_opp_child_dir || (*ref_child_opp_child_dir)->color == Color::BLACK) &&
+                (!*ref_child_opp_child_opp || (*ref_child_opp_child_opp)->color == Color::BLACK)) {
+                (*ref)->color = Color::BLACK;
+                (*ref_child_dir)->color = Color::RED;
+                (*ref_child_opp)->color = Color::RED;
+                ref = ref_child_dir;
+                continue;
+            }
+            if (*ref_child_opp_child_opp && (*ref_child_opp_child_opp)->color == Color::RED) {
+                Rotate(ref, dir);
+                (*ref)->color = Color::RED;
+                (*ref_child_opp_child_opp)->color = Color::BLACK;
+                (*ref)->child(dir)->color = Color::BLACK;
+                (*ref_child_dir)->color = Color::RED;
+                ref = ref_child_dir;
+                continue;
+            }
+            if (*ref_child_opp_child_dir && (*ref_child_opp_child_dir)->color == Color::RED) {
+                Rotate(ref_child_opp, opp);
+                Rotate(ref, dir);
+                (*ref)->color = Color::RED;
+                (*ref)->child(dir)->color = Color::BLACK;
+                (*ref_child_dir)->color = Color::RED;
+                ref = ref_child_dir;
+                continue;
+            }
+            assert(false);
+        }
+    }
+
+    Node* DetachRedNode(Node** ref) {
+        if (!(*ref)->lchild && !(*ref)->rchild) {
+            auto ret = *ref;
+            *ref = nullptr;
+            return ret;
+        } else {
+            auto node = *ref;
+            auto direction = node->lchild ? Direction::LEFT : Direction::RIGHT;
+            auto subtree_2 = node->child(direction);
+            assert(subtree_2);
+            auto minmax = DetachOnRedRootSubtree(ref, MinOrMaxOfSubtree(subtree_2, Opposite(direction)));
+            std::swap(node->key, minmax->key);
+            std::swap(node->object, minmax->object);
+            return minmax;
+        }
+    }
+
+    KeyType MinOrMaxOfSubtree(Node* node, Direction dir) {
+        assert(node);
+        while (node->child(dir))
+            node = node->child(dir);
+        return node->key;
+    }
+
    public:
     RBTreeImpl() {
         root = nullptr;
@@ -199,6 +327,8 @@ class RBTreeImpl {
     }
 
     void Delete(KeyType key) {
+        auto node = DetachNode(key);
+        delete node;
     }
 
     std::optional<ObjectType> Find(KeyType key) {
@@ -212,6 +342,7 @@ class RBTreeImpl {
         return std::nullopt;
     }
 
+#ifndef NDEBUG
     void Debug() {
         std::function<void(Node * node, int depth)> PrintNode = [&](Node* node, int depth) {
             if (!node)
@@ -241,6 +372,7 @@ class RBTreeImpl {
         };
         Validate(root);
     }
+#endif
 };
 
 };  // namespace nictheboy
