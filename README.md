@@ -12,7 +12,7 @@ git clone https://github.com/Nictheboy/rbtree.git --recursive
 
 ## How to compile
 
-You can use GCC, Clang or MSVC to build the project on Linux (or other UNIX-like OS) or Windows. Unit tests are not available for Windows.
+You can use GCC, Clang or MSVC to build the project on Linux (or other UNIX-like OS) or Windows.
 
 ### Linux
 
