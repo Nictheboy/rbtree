@@ -23,7 +23,7 @@ class StandardSet : public Set {
     virtual void Delete(KeyType key) {
         impl.erase(Element{key, nullptr});
     }
-    virtual std::optional<ObjectType> Find(KeyType key) {
+    virtual std::optional<ObjectType> Find(KeyType key) const {
         auto ret = impl.find(Element{key, nullptr});
         return ret != impl.end() ? std::make_optional(ret->object) : std::nullopt;
     }

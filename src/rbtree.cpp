@@ -32,7 +32,7 @@ void RBTree::Delete(KeyType key) {
 #endif
 }
 
-std::optional<ObjectType> RBTree::Find(KeyType key) {
+std::optional<ObjectType> RBTree::Find(KeyType key) const {
     return this->impl->Find(key);
 }
 
