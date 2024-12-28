@@ -45,7 +45,7 @@ class RBTreeImpl {
         delete node;
     }
 
-    void Rotate(Node** ref, Direction dir) {
+    inline void Rotate(Node** ref, Direction dir) {
         auto opp = Opposite(dir);
         auto node_2 = *ref;
         auto node_1 = node_2->child(opp);
@@ -60,7 +60,7 @@ class RBTreeImpl {
         node_2->child(dir) = subtree_3;
     }
 
-    void RotateZigzag(Node** ref, Direction dir) {
+    inline void RotateZigZag(Node** ref, Direction dir) {
         auto opp = Opposite(dir);
         assert((*ref)->child(opp));
         assert((*ref)->child(opp)->child(dir));
@@ -68,92 +68,52 @@ class RBTreeImpl {
         Rotate(ref, dir);
     }
 
-    struct ParentChild {
-        Node *child, *parent;
-        std::optional<Direction> parent_to_node;
-    };
-
-    ParentChild Rebalance2RedChilds(
-        Node* node,
-        Node* parent,
-        std::optional<Direction> parent_to_node,
-        Node* grandparent,
-        std::optional<Direction> grandparent_to_parent,
-        Node** ref_grandparent,
-        KeyType toward_key) {
-        assert(node);
-        assert(node->color == Color::BLACK);
-        assert(node->lchild && node->lchild->color == Color::RED);
-        assert(node->rchild && node->rchild->color == Color::RED);
-        if (parent && parent->color == Color::RED) {
-            assert(parent_to_node.has_value());
-            if (grandparent) {
-                assert(grandparent_to_parent.has_value());
-                auto direction_of_parent_to_node = parent_to_node.value();
-                auto direction_of_grandparent_to_parent = grandparent_to_parent.value();
-                if (direction_of_parent_to_node == direction_of_grandparent_to_parent) {
-                    Rotate(ref_grandparent, Opposite(direction_of_grandparent_to_parent));
-                    (*ref_grandparent)->color = Color::BLACK;
-                    (*ref_grandparent)->lchild->color = Color::RED;
-                    (*ref_grandparent)->rchild->color = Color::RED;
-                    node->lchild->color = Color::BLACK;
-                    node->rchild->color = Color::BLACK;
-                } else {
-                    RotateZigzag(ref_grandparent, direction_of_parent_to_node);
-                    (*ref_grandparent)->child(direction_of_parent_to_node)->color = Color::RED;
-                    (*ref_grandparent)->child(direction_of_parent_to_node)->child(direction_of_grandparent_to_parent)->color = Color::BLACK;
-                    (*ref_grandparent)->child(direction_of_grandparent_to_parent)->child(direction_of_parent_to_node)->color = Color::BLACK;
-                    parent = *ref_grandparent;
-                    parent_to_node = parent->direction(toward_key);
-                    node = parent->child(parent_to_node.value());
-                }
-                assert(parent->color == Color::BLACK);
-            } else {
-                parent->color = Color::BLACK;
-                node->color = Color::RED;
-                node->lchild->color = Color::BLACK;
-                node->rchild->color = Color::BLACK;
-            }
-        } else {
-            node->color = Color::RED;
-            node->lchild->color = Color::BLACK;
-            node->rchild->color = Color::BLACK;
-        }
-        return ParentChild{node, parent, parent_to_node};
+    inline void RotateBlackParentRedChild(Node** ref, Direction dir) {
+        assert((*ref)->color == Color::BLACK);
+        assert((*ref)->child(Opposite(dir)) && (*ref)->child(Opposite(dir))->color == Color::RED);
+        Rotate(ref, dir);
+        (*ref)->color = Color::BLACK;
+        (*ref)->child(dir)->color = Color::RED;
     }
 
-    void InsertWithoutRedFatherAndUncle(
-        Node* node,
+    inline void RebalanceRedParentRedChildWithoutRedUncleZigZig(Node** ref_grandparent, Direction dir_red_parent) {
+        auto opp = Opposite(dir_red_parent);
+        assert((*ref_grandparent)->color == Color::BLACK);
+        assert((*ref_grandparent)->child(dir_red_parent)->color == Color::RED);
+        assert((*ref_grandparent)->child(dir_red_parent)->child(dir_red_parent)->color == Color::RED);
+        assert(!(*ref_grandparent)->child(opp) || (*ref_grandparent)->child(opp)->color == Color::BLACK);
+        RotateBlackParentRedChild(ref_grandparent, opp);
+    }
+
+    inline void RebalanceRedParentRedChildWithoutRedUncleZigZag(Node** ref_grandparent, Direction dir_red_parent) {
+        auto opp = Opposite(dir_red_parent);
+        assert((*ref_grandparent)->color == Color::BLACK);
+        assert((*ref_grandparent)->child(dir_red_parent)->color == Color::RED);
+        assert((*ref_grandparent)->child(dir_red_parent)->child(opp)->color == Color::RED);
+        assert(!(*ref_grandparent)->child(opp) || (*ref_grandparent)->child(opp)->color == Color::BLACK);
+        RotateZigZag(ref_grandparent, opp);
+        (*ref_grandparent)->color = Color::BLACK;
+        (*ref_grandparent)->child(opp)->color = Color::RED;
+    }
+
+    inline void RebalancePossibleRedParentRedChildWithoutRedUncle(
+        std::optional<Direction> parent_to_node,
         Node* parent,
-        Direction parent_to_node,
-        Node* grandparent,
         std::optional<Direction> grandparent_to_parent,
+        Node* grandparent,
         Node** ref_grandparent) {
-        assert(node);
-        assert(node->color == Color::RED);
-        assert(parent);
-        if (parent->color == Color::RED) {
+        if (parent && parent->color == Color::RED) {
             if (grandparent) {
+                assert(parent_to_node.has_value());
                 assert(grandparent_to_parent.has_value());
-                auto direction_of_parent_to_node = parent_to_node;
-                auto direction_of_grandparent_to_parent = grandparent_to_parent.value();
-                if (direction_of_parent_to_node == direction_of_grandparent_to_parent) {
-                    parent->child(parent_to_node) = node;
-                    Rotate(ref_grandparent, Opposite(direction_of_grandparent_to_parent));
-                    (*ref_grandparent)->color = Color::BLACK;
-                    (*ref_grandparent)->child(Opposite(direction_of_grandparent_to_parent))->color = Color::RED;
+                if (parent_to_node == grandparent_to_parent) {
+                    RebalanceRedParentRedChildWithoutRedUncleZigZig(ref_grandparent, *grandparent_to_parent);
                 } else {
-                    parent->child(parent_to_node) = node;
-                    RotateZigzag(ref_grandparent, direction_of_parent_to_node);
-                    (*ref_grandparent)->color = Color::BLACK;
-                    (*ref_grandparent)->child(Opposite(direction_of_grandparent_to_parent))->color = Color::RED;
+                    RebalanceRedParentRedChildWithoutRedUncleZigZag(ref_grandparent, *grandparent_to_parent);
                 }
             } else {
                 parent->color = Color::BLACK;
-                parent->child(parent_to_node) = node;
             }
-        } else {
-            parent->child(parent_to_node) = node;
         }
     }
 
@@ -177,12 +137,10 @@ class RBTreeImpl {
         auto direction = root->direction(key);
         auto subtree = &root->child(direction);
         assert(*subtree);
-        if ((*subtree)->color == Color::RED)
-            return DetachOnRedRootSubtree(subtree, key);
-        Rotate(&root, direction);
-        root->color = Color::BLACK;
-        subtree = &root->child(direction);
-        (*subtree)->color = Color::RED;
+        if ((*subtree)->color != Color::RED) {
+            RotateBlackParentRedChild(&root, direction);
+            subtree = &root->child(direction);
+        }
         return DetachOnRedRootSubtree(subtree, key);
     }
 
@@ -218,10 +176,7 @@ class RBTreeImpl {
                 auto opp2 = Opposite(dir2);
                 auto ref_child_dir_child_opp2 = &(*ref_child_dir)->child(opp2);
                 if (ref_child_dir_child_opp2 && (*ref_child_dir_child_opp2)->color == Color::RED) {
-                    Rotate(ref_child_dir, dir2);
-                    (*ref_child_dir)->color = Color::BLACK;
-                    ref = &(*ref_child_dir)->child(dir2);
-                    (*ref)->color = Color::RED;
+                    RotateBlackParentRedChild(ref_child_dir, dir2);
                     continue;
                 }
             }
@@ -248,8 +203,7 @@ class RBTreeImpl {
                 continue;
             }
             if (*ref_child_opp_child_dir && (*ref_child_opp_child_dir)->color == Color::RED) {
-                Rotate(ref_child_opp, opp);
-                Rotate(ref, dir);
+                RotateZigZag(ref, dir);
                 (*ref)->color = Color::RED;
                 (*ref)->child(dir)->color = Color::BLACK;
                 (*ref_child_dir)->color = Color::RED;
@@ -306,12 +260,16 @@ class RBTreeImpl {
         while (current) {
             if ((current->lchild && current->lchild->color == Color::RED &&
                  current->rchild && current->rchild->color == Color::RED)) {
-                auto ret = Rebalance2RedChilds(current, parent, parent_to_current,
-                                               grandparent, grandparent_to_parent,
-                                               ref_grandparent, key);
-                current = ret.child;
-                parent = ret.parent;
-                parent_to_current = ret.parent_to_node;
+                current->color = Color::RED;
+                current->lchild->color = Color::BLACK;
+                current->rchild->color = Color::BLACK;
+                RebalancePossibleRedParentRedChildWithoutRedUncle(
+                    parent_to_current, parent, grandparent_to_parent, grandparent, ref_grandparent);
+                if (current->color == Color::BLACK) {  // Zig-Zag Rebalance
+                    parent_to_current = current->direction(key);
+                    parent = current;
+                    current = current->child(*parent_to_current);
+                }
             }
             direction = current->direction(key);
             ref_grandparent = grandparent ? &grandparent->child(grandparent_to_parent.value())
@@ -323,7 +281,9 @@ class RBTreeImpl {
             grandparent_to_parent = parent_to_current;
             parent_to_current = direction;
         }
-        InsertWithoutRedFatherAndUncle(new_node, parent, direction, grandparent, grandparent_to_parent, ref_grandparent);
+        parent->child(direction) = new_node;
+        RebalancePossibleRedParentRedChildWithoutRedUncle(
+            direction, parent, grandparent_to_parent, grandparent, ref_grandparent);
     }
 
     void Delete(KeyType key) {
